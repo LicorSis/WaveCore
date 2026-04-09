@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>WaveCore</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      max-width: 480px;
+      margin: 40px auto;
+      padding: 0 16px;
+      transition: all 0.2s ease;
+    }
+
+    h2 {
+      margin-bottom: 16px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      margin-bottom: 10px;
+      background: #1e293b;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: none;
+      background: #6366f1;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #4f46e5;
+    }
+
+    #status {
+      margin-top: 12px;
+      color: #94a3b8;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    #error {
+      margin-top: 6px;
+      color: #f87171;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    #result {
+      margin-top: 16px;
+      padding: 0;
+      list-style: none;
+    }
+
+    #result li {
+      background: #1e293b;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    #chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    
+    #chips button {
+      background: #1e293b;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    /* Светлая тема */
+    body.light {
+      background: white;
+      color: black;
+    }
+    
+    body.light input {
+      background: #f1f5f9;
+      color: black;
+    }
+    
+    body.light #result li {
+      background: #e2e8f0;
+      color: black;
+    }
+    
+    body.light #chips button {
+      background: #e2e8f0;
+      color: black;
+    }
+    button:active {
+      transform: scale(0.97);
+    }
+    #result li:hover {
+      background: #334155;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>🎧 WaveCore</h2>
+  <p style="color:#94a3b8; margin-top:-10px;">Музыка под твоё настроение</p>
+  <button onclick="toggleTheme()">Сменить тему</button>
+
+  <input id="mood" placeholder="например: грустно ночью">
+  <div id="chips">
+    <button onclick="setMood('грустно')">😔 Грустно</button>
+    <button onclick="setMood('радостно')">😄 Радостно</button>
+    <button onclick="setMood('энергично')">⚡ Энергично</button>
+    <button onclick="setMood('спокойно')">🌿 Спокойно</button>
+  </div>
+  <button onclick="generate()">Создать волну</button>
+
+  <div id="status"></div>
+  <div id="error"></div>
+  <ul id="result"></ul>
+
+  <script>
+  const tg = window.Telegram?.WebApp;
+  
+  if (tg) {
+    tg.ready();
+    tg.expand();
+  }
+    async function generate() {
+      const mood = document.getElementById("mood").value.trim();
+      const status = document.getElementById("status");
+      const error = document.getElementById("error");
+      const list = document.getElementById("result");
+
+      error.textContent = "";
+      list.innerHTML = "";
+
+      if (!mood) {
+        error.textContent = "Введите настроение";
+        return;
+      }
+
+      status.textContent = "🎵 Подбираем музыку...";
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred("light");
+      }
+
+      try {
+        const res = await fetch("http://localhost:3000/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mood })
+        });
+
+        if (!res.ok) {
+          throw new Error("Ошибка сервера");
+        }
+
+        const data = await res.json();
+
+        data.tracks.forEach(track => {
+          const li = document.createElement("li");
+          li.textContent = `${track.title} — ${track.artist}`;
+          list.appendChild(li);
+        });
+
+      } catch (err) {
+        error.textContent = "Ошибка подключения";
+      } finally {
+        status.textContent = "";
+      }
+    }
+  function toggleTheme() {
+      document.body.classList.toggle("light");
+    }
+    function setMood(value) {
+      document.getElementById("mood").value = value;
+    }
+    
+  </script>
+
+</body>
+</html>
