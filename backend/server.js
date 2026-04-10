@@ -34,6 +34,27 @@ const tracks = [
 // МАППИНГ: mood (настроение) → теги
 // ─────────────────────────────────────────────
 const moodToTags = {
+
+  // Контекст / атмосфера
+  "ночь": ["dark", "slow"],
+  "ночью": ["dark", "slow"],
+  "дождь": ["sad", "calm"],
+  "дождливо": ["sad", "calm"],
+  "вечер": ["chill", "calm"],
+  "одиночество": ["sad", "slow"],
+  
+  // Жанры
+  "рэп": ["energetic"],
+  "рок": ["energetic", "dark"],
+  "lofi": ["chill"],
+  "лофи": ["chill"],
+  "электро": ["fast", "upbeat"],
+  
+  // Языки (заготовка)
+  "русский": ["ru"],
+  "английский": ["en"],
+  "японский": ["jp"],
+  
   // Грусть / печаль
   "грустно":    ["sad", "slow"],
   "печально":   ["sad", "slow", "dark"],
@@ -72,6 +93,26 @@ const moodToTags = {
  * @returns {string[]} — массив тегов
  */
 function getTagsByMood(mood) {
+  const normalized = mood.toLowerCase();
+
+  const words = normalized.split(/\s+/);
+  const resultTags = new Set();
+
+  for (const word of words) {
+    for (const [key, tags] of Object.entries(moodToTags)) {
+      if (word.includes(key)) {
+        tags.forEach(tag => resultTags.add(tag));
+      }
+    }
+  }
+
+  // если ничего не нашли
+  if (resultTags.size === 0) {
+    return ["chill", "calm"];
+  }
+
+  return Array.from(resultTags);
+}
   const normalized = mood.trim().toLowerCase();
 
   // Прямое совпадение с ключом
