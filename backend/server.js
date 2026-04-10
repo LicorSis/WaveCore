@@ -8,11 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 // Парсим входящий JSON
 app.use(express.json());
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"]
-}));
+app.use(cors());
 // ─────────────────────────────────────────────
 // МОК-ДАННЫЕ: треки с тегами
 // ─────────────────────────────────────────────
