@@ -151,12 +151,11 @@ app.post("/generate", (req, res) => {
 // ЗАПУСК СЕРВЕРА
 // ─────────────────────────────────────────────
 app.get("/", (req, res) => {
-    res.send("WaveCore API работает 🚀");
-  });
-  
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Сервер запущен на порту ${PORT}`);
-  });
+  res.send("WaveCore API работает 🚀");
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Сервер запущен на порту ${PORT}`);
   console.log(`Пример запроса:`);
   console.log(`  curl -X POST http://localhost:${PORT}/generate \\`);
   console.log(`       -H "Content-Type: application/json" \\`);
