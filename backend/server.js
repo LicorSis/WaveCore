@@ -150,7 +150,7 @@ app.post("/generate", (req, res) => {
 // ─────────────────────────────────────────────
 // ЗАПУСК СЕРВЕРА
 // ─────────────────────────────────────────────
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
   console.log(`Пример запроса:`);
   console.log(`  curl -X POST http://localhost:${PORT}/generate \\`);
