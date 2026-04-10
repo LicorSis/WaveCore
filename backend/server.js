@@ -93,26 +93,24 @@ const moodToTags = {
  * @returns {string[]} — массив тегов
  */
 function getTagsByMood(mood) {
-  
+  const normalized = mood.toLowerCase();
+  const words = normalized.split(/\s+/);
 
-  return Array.from(resultTags);
-}
-  const normalized = mood.trim().toLowerCase();
+  const resultTags = new Set();
 
-  // Прямое совпадение с ключом
-  if (moodToTags[normalized]) {
-    return moodToTags[normalized];
-  }
-
-  // Частичное совпадение (если mood содержит ключевое слово)
-  for (const [key, tags] of Object.entries(moodToTags)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
-      return tags;
+  for (const word of words) {
+    for (const [key, tags] of Object.entries(moodToTags)) {
+      if (word.includes(key)) {
+        tags.forEach(tag => resultTags.add(tag));
+      }
     }
   }
 
-  // Ничего не нашли — возвращаем «нейтральные» теги
-  return ["chill", "calm"];
+  if (resultTags.size === 0) {
+    return ["chill", "calm"];
+  }
+
+  return Array.from(resultTags);
 }
 
 /**
