@@ -2,6 +2,7 @@
 
 const express = require("express");
 const cors = require("cors");
+const YT_API_KEY = "AIzaSyBDhyd3tX8rpsQ093qlK2StdIZmtqlfFcA";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -84,7 +85,8 @@ const moodToTags = {
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ─────────────────────────────────────────────
 
-/**
+ /**
+
  * Определяет теги по строке настроения.
  * Ищет совпадение по ключевым словам из moodToTags.
  * Если ничего не найдено — возвращает дефолтные теги.
@@ -92,6 +94,37 @@ const moodToTags = {
  * @param {string} mood — строка настроения от пользователя
  * @returns {string[]} — массив тегов
  */
+ // ─────────────────────────────────────────────
+ // YOUTUBE API: поиск треков по тегам
+ // ─────────────────────────────────────────────
+ /**
+  * Получает треки с YouTube по тегам.
+  * Использует YouTube Data API v3.
+  *
+  * @param {string[]} tags — массив тегов (настроение)
+  * @returns {Promise<object[]>} — список треков
+  */
+ async function getYouTubeTracks(tags) {
+   const query = tags.join(" ") + " music";
+ 
+   try {
+     const res = await fetch(
+       `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&q=${encodeURIComponent(query)}&key=${YT_API_KEY}`
+     );
+ 
+     const data = await res.json();
+ 
+     return data.items.map(item => ({
+       title: item.snippet.title,
+       artist: item.snippet.channelTitle,
+       videoId: item.id.videoId
+     }));
+ 
+   } catch (err) {
+     console.error("YouTube error:", err);
+     return [];
+   }
+ }
  function scoreTracks(allTracks, tags) {
    return allTracks.map(track => {
      let score = 0;
@@ -155,7 +188,7 @@ function pickRandom(arr, count) {
 // ─────────────────────────────────────────────
 // ENDPOINT: POST /generate
 // ─────────────────────────────────────────────
-app.post("/generate", (req, res) => {
+app.post("/generate", async (req, res) => {
   const { mood } = req.body;
 
   // Валидация входных данных
@@ -175,18 +208,27 @@ app.post("/generate", (req, res) => {
   
   const matched = scored.map(({ score, ...rest }) => rest);
 
-  // 3. Если треков нашлось мало — берём все доступные
-  const pool = matched.length > 0 ? matched : tracks;
+// ─────────────────────────────────────────────
+// ПОЛУЧЕНИЕ ТРЕКОВ (YouTube + fallback)
+// ─────────────────────────────────────────────
 
-  // 4. Выбираем до 5 случайных треков
+// 3. Пытаемся получить реальные треки с YouTube
+let result = await getYouTubeTracks(tags);
+
+// 4. Если YouTube не дал результат — используем локальные треки
+if (!result || result.length === 0) {
+  const pool = matched.length > 0 ? matched : tracks;
   const selected = pickRandom(pool, 5);
 
-  // 5. Формируем ответ (только title и artist, без тегов)
-  const result = selected.map(({ title, artist }) => ({ title, artist }));
+  result = selected.map(({ title, artist }) => ({
+    title,
+    artist
+  }));
+}
 
-  return res.json({ tracks: result });
+// 5. Возвращаем результат
+return res.json({ tracks: result });
 });
-
 // ─────────────────────────────────────────────
 // ЗАПУСК СЕРВЕРА
 // ─────────────────────────────────────────────
