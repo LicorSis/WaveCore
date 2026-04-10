@@ -92,6 +92,19 @@ const moodToTags = {
  * @param {string} mood — строка настроения от пользователя
  * @returns {string[]} — массив тегов
  */
+ function scoreTracks(allTracks, tags) {
+   return allTracks.map(track => {
+     let score = 0;
+ 
+     for (const tag of tags) {
+       if (track.tags.includes(tag)) {
+         score += 1;
+       }
+     }
+ 
+     return { ...track, score };
+   });
+ }
 function getTagsByMood(mood) {
   const normalized = mood.toLowerCase();
   const words = normalized.split(/\s+/);
@@ -156,7 +169,11 @@ app.post("/generate", (req, res) => {
   const tags = getTagsByMood(mood);
 
   // 2. Фильтруем треки по тегам
-  const matched = filterByTags(tracks, tags);
+  const scored = scoreTracks(tracks, tags);
+  
+  scored.sort((a, b) => b.score - a.score);
+  
+  const matched = scored.map(({ score, ...rest }) => rest);
 
   // 3. Если треков нашлось мало — берём все доступные
   const pool = matched.length > 0 ? matched : tracks;
