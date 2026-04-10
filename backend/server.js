@@ -93,22 +93,7 @@ const moodToTags = {
  * @returns {string[]} — массив тегов
  */
 function getTagsByMood(mood) {
-  const normalized = mood.toLowerCase();
-  const words = normalized.split(/\s+/);
-
-  const resultTags = new Set();
-
-  for (const word of words) {
-    for (const [key, tags] of Object.entries(moodToTags)) {
-      if (word.includes(key)) {
-        tags.forEach(tag => resultTags.add(tag));
-      }
-    }
-  }
-
-  if (resultTags.size === 0) {
-    return ["chill", "calm"];
-  }
+  
 
   return Array.from(resultTags);
 }
