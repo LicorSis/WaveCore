@@ -173,8 +173,7 @@
       }
 
       try {
-        const res = await fetch("https://wavecore-production.up.railway.app/generate", {
-          method: "POST",
+        const res = await fetch("https://wavecore-api.onrender.com/generate")          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mood })
         });
