@@ -94,8 +94,8 @@ const moodToTags = {
  */
 function getTagsByMood(mood) {
   const normalized = mood.toLowerCase();
-
   const words = normalized.split(/\s+/);
+
   const resultTags = new Set();
 
   for (const word of words) {
@@ -106,7 +106,6 @@ function getTagsByMood(mood) {
     }
   }
 
-  // если ничего не нашли
   if (resultTags.size === 0) {
     return ["chill", "calm"];
   }
