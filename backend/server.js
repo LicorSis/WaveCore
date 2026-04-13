@@ -1,311 +1,165 @@
-// server.js — простой Express-сервер для генерации треков по настроению
-
 const express = require("express");
 const cors = require("cors");
-const YT_API_KEY = "AIzaSyBDhyd3tX8rpsQ093qlK2StdIZmtqlfFcA";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Парсим входящий JSON
+// 🔑 YouTube API
+const YT_API_KEY = "ТВОЙ_API_KEY";
+
+// middleware
 app.use(express.json());
 app.use(cors());
+
+
 // ─────────────────────────────────────────────
-// МОК-ДАННЫЕ: треки с тегами
+// FALLBACK ТРЕКИ (если YouTube не дал результат)
 // ─────────────────────────────────────────────
 const tracks = [
-  { title: "Rainy Day",         artist: "Lo-Fi Boy",        tags: ["sad", "slow", "chill"] },
-  { title: "Empty Streets",     artist: "Night Owl",         tags: ["sad", "slow", "dark"] },
-  { title: "Neon Lights",       artist: "Synthwave Kid",     tags: ["energetic", "fast", "upbeat"] },
-  { title: "Morning Coffee",    artist: "Acoustic Vibes",    tags: ["happy", "chill", "calm"] },
-  { title: "Dance All Night",   artist: "Club Fever",        tags: ["energetic", "fast", "party", "upbeat"] },
-  { title: "Ocean Drive",       artist: "Summer Beats",      tags: ["happy", "upbeat", "calm"] },
-  { title: "Midnight Thoughts", artist: "Deep Mind",         tags: ["sad", "slow", "dark", "calm"] },
-  { title: "Power Up",          artist: "Gym Mode",          tags: ["energetic", "fast", "motivational"] },
-  { title: "Chill at Home",     artist: "Bedroom Pop",       tags: ["chill", "calm", "happy"] },
-  { title: "Broken Glass",      artist: "The Sad Hours",     tags: ["sad", "dark", "slow"] },
-  { title: "Golden Hour",       artist: "Sunny Day",         tags: ["happy", "upbeat", "calm"] },
-  { title: "Run the World",     artist: "Power Move",        tags: ["energetic", "motivational", "fast"] },
-  { title: "Stargazing",        artist: "Cosmic Chill",      tags: ["chill", "calm", "slow"] },
-  { title: "Fire Inside",       artist: "Rock Force",        tags: ["energetic", "fast", "dark"] },
-  { title: "Lazy Sunday",       artist: "Soft Echo",         tags: ["chill", "calm", "slow", "happy"] },
+  { title: "Rainy Day", artist: "Lo-Fi Boy", tags: ["sad", "slow", "chill"] },
+  { title: "Neon Lights", artist: "Synthwave Kid", tags: ["energetic", "fast"] },
+  { title: "Morning Coffee", artist: "Acoustic Vibes", tags: ["happy", "calm"] },
 ];
 
+
 // ─────────────────────────────────────────────
-// МАППИНГ: mood (настроение) → теги
+// МАППИНГ НАСТРОЕНИЙ → ТЕГИ
 // ─────────────────────────────────────────────
 const moodToTags = {
-
-  // Контекст / атмосфера
-  "ночь": ["dark", "slow"],
-  "ночью": ["dark", "slow"],
-  "дождь": ["sad", "calm"],
-  "дождливо": ["sad", "calm"],
-  "вечер": ["chill", "calm"],
-  "одиночество": ["sad", "slow"],
-  
-  // Жанры
-  "рэп": ["energetic"],
-  "рок": ["energetic", "dark"],
-  "lofi": ["chill"],
-  "лофи": ["chill"],
-  "электро": ["fast", "upbeat"],
-  
-  // Языки (заготовка)
-  "русский": ["ru"],
-  "английский": ["en"],
-  "японский": ["jp"],
-  
-  // Грусть / печаль
-  "грустно":    ["sad", "slow"],
-  "печально":   ["sad", "slow", "dark"],
-  "тоскливо":   ["sad", "dark"],
-
-  // Радость / веселье
-  "радостно":   ["happy", "upbeat"],
-  "весело":     ["happy", "upbeat", "party"],
-  "счастливо":  ["happy", "calm"],
-
-  // Энергия / спорт
-  "энергично":  ["energetic", "fast"],
-  "бодро":      ["energetic", "motivational"],
-  "спорт":      ["energetic", "fast", "motivational"],
-
-  // Расслабление
-  "спокойно":   ["chill", "calm"],
-  "расслабленно": ["chill", "calm", "slow"],
-  "медитация":  ["calm", "slow", "chill"],
-
-  // Тёмное настроение
-  "мрачно":     ["dark", "slow"],
-  "тревожно":   ["dark", "sad"],
+  "грустно": ["sad", "slow"],
+  "радостно": ["happy", "upbeat"],
+  "энергично": ["energetic", "fast"],
+  "спокойно": ["chill", "calm"],
+  "ночь": ["dark"],
+  "дождь": ["sad", "calm"]
 };
 
+
 // ─────────────────────────────────────────────
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ПРЕОБРАЗОВАНИЕ ВВОДА В ТЕГИ
 // ─────────────────────────────────────────────
-
- /**
-
- * Определяет теги по строке настроения.
- * Ищет совпадение по ключевым словам из moodToTags.
- * Если ничего не найдено — возвращает дефолтные теги.
- *
- * @param {string} mood — строка настроения от пользователя
- * @returns {string[]} — массив тегов
- */
- // ─────────────────────────────────────────────
- // YOUTUBE API: поиск треков по тегам
- // ─────────────────────────────────────────────
- /**
-  * Получает треки с YouTube по тегам.
-  * Использует YouTube Data API v3.
-  *
-  * @param {string[]} tags — массив тегов (настроение)
-  * @returns {Promise<object[]>} — список треков
-  */
-
-	// ─────────────────────────────────────────────
-	// УМНЫЙ ПОИСК (делаем запрос более "человеческим")
-	// ─────────────────────────────────────────────
-	function buildSearchQuery(tags) {
-	  const moodMap = {
-	    sad: "sad emotional",
-	    happy: "happy upbeat",
-	    energetic: "energetic workout",
-	    calm: "calm relaxing",
-	    chill: "chill lofi",
-	    dark: "dark атмосферная",
-	    slow: "slow emotional"
-	  };
-	
-	  const mapped = tags.map(tag => moodMap[tag] || tag);
-	
-	  return mapped.join(" ") + " song";
-	}
-	
-	 async function getYouTubeTracks(tags) {
-	  const query = buildSearchQuery(tags);
-	  
-   try {
-       const res = await fetch(
-         `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video,playlist&maxResults=5&q=${encodeURIComponent(query)}&key=${YT_API_KEY}`
-       );
-     
-       const data = await res.json();
- 
-   // ─────────────────────────────────────────────
-     // ФИЛЬТРАЦИЯ МУСОРА (убираем миксы, радио и т.д.)
-     // ─────────────────────────────────────────────
-     const filtered = data.items.filter(item => {
-       const title = item.snippet.title.toLowerCase();
-     
-       return !(
-         title.includes("mix") ||
-         title.includes("playlist") ||
-         title.includes("radio") ||
-         title.includes("live") ||
-         title.includes("24/7") ||
-         title.includes("stream")
-       );
-     });
-     
-     // ─────────────────────────────────────────────
-     // ПРЕОБРАЗОВАНИЕ В НОРМАЛЬНЫЕ ТРЕКИ
-     // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-     // РАЗДЕЛЕНИЕ: треки и плейлисты
-     // ─────────────────────────────────────────────
-     const tracksYT = [];
-     const playlists = [];
-     
-     for (const item of filtered) {
-       if (item.id.kind === "youtube#video") {
-         tracksYT.push({
-           title: item.snippet.title,
-           artist: item.snippet.channelTitle,
-           url: `https://www.youtube.com/watch?v=${item.id.videoId}`
-         });
-       }
-     
-       if (item.id.kind === "youtube#playlist") {
-         playlists.push({
-           title: item.snippet.title,
-           url: `https://www.youtube.com/playlist?list=${item.id.playlistId}`
-         });
-       }
-     }
-     
-     return {
-       tracks: tracksYT,
-       playlists: playlists
-     };
- 
-   } catch (err) {
-     console.error("YouTube error:", err);
-     return [];
-   }
- }
- function scoreTracks(allTracks, tags) {
-   return allTracks.map(track => {
-     let score = 0;
- 
-     for (const tag of tags) {
-       if (track.tags.includes(tag)) {
-         score += 1;
-       }
-     }
- 
-     return { ...track, score };
-   });
- }
 function getTagsByMood(mood) {
-  const normalized = mood.toLowerCase();
-  const words = normalized.split(/\s+/);
-
-  const resultTags = new Set();
+  const words = mood.toLowerCase().split(/\s+/);
+  const result = new Set();
 
   for (const word of words) {
     for (const [key, tags] of Object.entries(moodToTags)) {
       if (word.includes(key)) {
-        tags.forEach(tag => resultTags.add(tag));
+        tags.forEach(t => result.add(t));
       }
+    }
+
+    // добавляем неизвестные слова (для YouTube поиска)
+    if (!moodToTags[word]) {
+      result.add(word);
     }
   }
 
- // ─────────────────────────────────────────────
-// ДОБАВЛЯЕМ НЕИЗВЕСТНЫЕ СЛОВА (человеческий ввод)
+  return result.size ? [...result] : ["chill"];
+}
+
+
 // ─────────────────────────────────────────────
-for (const word of words) {
-  if (!moodToTags[word]) {
-    resultTags.add(word);
+// УМНЫЙ ПОИСК
+// ─────────────────────────────────────────────
+function buildSearchQuery(tags) {
+  const map = {
+    sad: "sad emotional",
+    happy: "happy upbeat",
+    energetic: "workout",
+    calm: "relax",
+    chill: "lofi",
+    dark: "dark mood"
+  };
+
+  return tags.map(t => map[t] || t).join(" ") + " song";
+}
+
+
+// ─────────────────────────────────────────────
+// YOUTUBE API
+// ─────────────────────────────────────────────
+async function getYouTubeTracks(tags) {
+  const query = buildSearchQuery(tags);
+
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video,playlist&maxResults=10&q=${encodeURIComponent(query)}&key=${YT_API_KEY}`
+    );
+
+    const data = await res.json();
+
+    const filtered = data.items.filter(item => {
+      const t = item.snippet.title.toLowerCase();
+      return !(
+        t.includes("mix") ||
+        t.includes("playlist") ||
+        t.includes("radio") ||
+        t.includes("live")
+      );
+    });
+
+    const tracks = [];
+    const playlists = [];
+
+    for (const item of filtered) {
+      if (item.id.kind === "youtube#video") {
+        tracks.push({
+          title: item.snippet.title,
+          artist: item.snippet.channelTitle,
+          url: `https://www.youtube.com/watch?v=${item.id.videoId}`
+        });
+      }
+
+      if (item.id.kind === "youtube#playlist") {
+        playlists.push({
+          title: item.snippet.title,
+          url: `https://www.youtube.com/playlist?list=${item.id.playlistId}`
+        });
+      }
+    }
+
+    return { tracks, playlists };
+
+  } catch (err) {
+    console.error("YT error:", err);
+    return { tracks: [], playlists: [] };
   }
 }
 
-// если вообще ничего не нашли — дефолт
-if (resultTags.size === 0) {
-  return ["chill", "calm"];
-}
-
-return Array.from(resultTags);
-
-
-/**
- * Возвращает до `count` случайных элементов из массива.
- *
- * @param {any[]} arr — исходный массив
- * @param {number} count — сколько элементов вернуть
- * @returns {any[]} — перемешанный срез
- */
-function pickRandom(arr, count) {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-}
 
 // ─────────────────────────────────────────────
-// ENDPOINT: POST /generate
+// ENDPOINT
 // ─────────────────────────────────────────────
 app.post("/generate", async (req, res) => {
   const { mood } = req.body;
 
-  // Валидация входных данных
-  if (!mood || typeof mood !== "string" || mood.trim() === "") {
-    return res.status(400).json({
-      error: 'Поле "mood" обязательно и должно быть непустой строкой.',
-    });
+  if (!mood) {
+    return res.status(400).json({ error: "Введите настроение" });
   }
 
-  // 1. Получаем теги по настроению
   const tags = getTagsByMood(mood);
+  let yt = await getYouTubeTracks(tags);
 
-  // 2. Фильтруем треки по тегам
-  const scored = scoreTracks(tracks, tags);
-  
-  scored.sort((a, b) => b.score - a.score);
-  
-  const matched = scored.map(({ score, ...rest }) => rest);
+  // fallback
+  if (!yt.tracks.length) {
+    yt.tracks = tracks.slice(0, 3);
+  }
 
-// ─────────────────────────────────────────────
-// ПОЛУЧЕНИЕ ТРЕКОВ (YouTube + fallback)
-// ─────────────────────────────────────────────
-
-// 3. Пытаемся получить реальные треки с YouTube
-let result = await getYouTubeTracks(tags);
-
-// 4. Если YouTube не дал результат — используем локальные треки
-let yt = await getYouTubeTracks(tags);
-
-// fallback если нет треков
-if (!yt.tracks || yt.tracks.length === 0) {
-  const pool = matched.length > 0 ? matched : tracks;
-  const selected = pickRandom(pool, 5);
-
-  yt.tracks = selected.map(({ title, artist }) => ({
-    title,
-    artist
-  }));
-}
-
-// возвращаем и треки и плейлисты
-return res.json({
-  tracks: yt.tracks,
-  playlists: yt.playlists || []
+  return res.json({
+    tracks: yt.tracks,
+    playlists: yt.playlists
+  });
 });
 
-// 5. Возвращаем результат
-return res.json({ tracks: result });
-});
+
 // ─────────────────────────────────────────────
-// ЗАПУСК СЕРВЕРА
+// SERVER
 // ─────────────────────────────────────────────
 app.get("/", (req, res) => {
   res.send("WaveCore API работает 🚀");
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
-  console.log(`Пример запроса:`);
-  console.log(`  curl -X POST http://localhost:${PORT}/generate \\`);
-  console.log(`       -H "Content-Type: application/json" \\`);
-  console.log(`       -d '{"mood": "грустно"}'`);
+  console.log(`Server running on ${PORT}`);
 });
