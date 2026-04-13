@@ -206,11 +206,43 @@
 
         const data = await res.json();
 
+    // ─────────────────────────────────────────────
+        // ТРЕКИ
+        // ─────────────────────────────────────────────
+        const tracksTitle = document.createElement("h3");
+        tracksTitle.textContent = "🎧 Треки";
+        list.appendChild(tracksTitle);
+        
         data.tracks.forEach(track => {
           const li = document.createElement("li");
           li.textContent = `${track.title} — ${track.artist}`;
+          
+          li.onclick = () => {
+            window.open(track.url, "_blank");
+          };
+        
           list.appendChild(li);
         });
+        
+        // ─────────────────────────────────────────────
+        // ПЛЕЙЛИСТЫ
+        // ─────────────────────────────────────────────
+        if (data.playlists && data.playlists.length > 0) {
+          const playlistsTitle = document.createElement("h3");
+          playlistsTitle.textContent = "📂 Плейлисты";
+          list.appendChild(playlistsTitle);
+        
+          data.playlists.forEach(pl => {
+            const li = document.createElement("li");
+            li.textContent = pl.title;
+        
+            li.onclick = () => {
+              window.open(pl.url, "_blank");
+            };
+        
+            list.appendChild(li);
+          });
+        }
 
       } catch (err) {
         error.textContent = "Ошибка подключения";
