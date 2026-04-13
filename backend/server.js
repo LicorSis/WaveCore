@@ -114,7 +114,26 @@ const moodToTags = {
  
      const data = await res.json();
  
-     return data.items.map(item => ({
+   // ─────────────────────────────────────────────
+     // ФИЛЬТРАЦИЯ МУСОРА (убираем миксы, радио и т.д.)
+     // ─────────────────────────────────────────────
+     const filtered = data.items.filter(item => {
+       const title = item.snippet.title.toLowerCase();
+     
+       return !(
+         title.includes("mix") ||
+         title.includes("playlist") ||
+         title.includes("radio") ||
+         title.includes("live") ||
+         title.includes("24/7") ||
+         title.includes("stream")
+       );
+     });
+     
+     // ─────────────────────────────────────────────
+     // ПРЕОБРАЗОВАНИЕ В НОРМАЛЬНЫЕ ТРЕКИ
+     // ─────────────────────────────────────────────
+     return filtered.map(item => ({
        title: item.snippet.title,
        artist: item.snippet.channelTitle,
        videoId: item.id.videoId
