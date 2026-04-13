@@ -5,8 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 🔑 YouTube API
-const YT_API_KEY = "ТВОЙ_API_KEY";
-
+const YT_API_KEY = "AIzaSyBDhyd3tX8rpsQ093qlK2StdIZmtqlfFcA";
 // middleware
 app.use(express.json());
 app.use(cors());
