@@ -104,15 +104,35 @@ const moodToTags = {
   * @param {string[]} tags — массив тегов (настроение)
   * @returns {Promise<object[]>} — список треков
   */
- async function getYouTubeTracks(tags) {
-   const query = tags.join(" ") + " music";
- 
+
+	// ─────────────────────────────────────────────
+	// УМНЫЙ ПОИСК (делаем запрос более "человеческим")
+	// ─────────────────────────────────────────────
+	function buildSearchQuery(tags) {
+	  const moodMap = {
+	    sad: "sad emotional",
+	    happy: "happy upbeat",
+	    energetic: "energetic workout",
+	    calm: "calm relaxing",
+	    chill: "chill lofi",
+	    dark: "dark атмосферная",
+	    slow: "slow emotional"
+	  };
+	
+	  const mapped = tags.map(tag => moodMap[tag] || tag);
+	
+	  return mapped.join(" ") + " song";
+	}
+	
+	 async function getYouTubeTracks(tags) {
+	  const query = buildSearchQuery(tags);
+	  
    try {
-     const res = await fetch(
-       `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&q=${encodeURIComponent(query)}&key=${YT_API_KEY}`
-     );
- 
-     const data = await res.json();
+       const res = await fetch(
+         `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video,playlist&maxResults=5&q=${encodeURIComponent(query)}&key=${YT_API_KEY}`
+       );
+     
+       const data = await res.json();
  
    // ─────────────────────────────────────────────
      // ФИЛЬТРАЦИЯ МУСОРА (убираем миксы, радио и т.д.)
@@ -133,11 +153,33 @@ const moodToTags = {
      // ─────────────────────────────────────────────
      // ПРЕОБРАЗОВАНИЕ В НОРМАЛЬНЫЕ ТРЕКИ
      // ─────────────────────────────────────────────
-     return filtered.map(item => ({
-       title: item.snippet.title,
-       artist: item.snippet.channelTitle,
-       videoId: item.id.videoId
-     }));
+    // ─────────────────────────────────────────────
+     // РАЗДЕЛЕНИЕ: треки и плейлисты
+     // ─────────────────────────────────────────────
+     const tracksYT = [];
+     const playlists = [];
+     
+     for (const item of filtered) {
+       if (item.id.kind === "youtube#video") {
+         tracksYT.push({
+           title: item.snippet.title,
+           artist: item.snippet.channelTitle,
+           url: `https://www.youtube.com/watch?v=${item.id.videoId}`
+         });
+       }
+     
+       if (item.id.kind === "youtube#playlist") {
+         playlists.push({
+           title: item.snippet.title,
+           url: `https://www.youtube.com/playlist?list=${item.id.playlistId}`
+         });
+       }
+     }
+     
+     return {
+       tracks: tracksYT,
+       playlists: playlists
+     };
  
    } catch (err) {
      console.error("YouTube error:", err);
@@ -171,26 +213,22 @@ function getTagsByMood(mood) {
     }
   }
 
-  if (resultTags.size === 0) {
-    return ["chill", "calm"];
+ // ─────────────────────────────────────────────
+// ДОБАВЛЯЕМ НЕИЗВЕСТНЫЕ СЛОВА (человеческий ввод)
+// ─────────────────────────────────────────────
+for (const word of words) {
+  if (!moodToTags[word]) {
+    resultTags.add(word);
   }
-
-  return Array.from(resultTags);
 }
 
-/**
- * Фильтрует треки по тегам: трек подходит,
- * если у него есть хотя бы один совпадающий тег.
- *
- * @param {object[]} allTracks — полный список треков
- * @param {string[]} tags — теги для фильтрации
- * @returns {object[]} — отфильтрованные треки
- */
-function filterByTags(allTracks, tags) {
-  return allTracks.filter((track) =>
-    track.tags.some((tag) => tags.includes(tag))
-  );
+// если вообще ничего не нашли — дефолт
+if (resultTags.size === 0) {
+  return ["chill", "calm"];
 }
+
+return Array.from(resultTags);
+
 
 /**
  * Возвращает до `count` случайных элементов из массива.
@@ -235,15 +273,24 @@ app.post("/generate", async (req, res) => {
 let result = await getYouTubeTracks(tags);
 
 // 4. Если YouTube не дал результат — используем локальные треки
-if (!result || result.length === 0) {
+let yt = await getYouTubeTracks(tags);
+
+// fallback если нет треков
+if (!yt.tracks || yt.tracks.length === 0) {
   const pool = matched.length > 0 ? matched : tracks;
   const selected = pickRandom(pool, 5);
 
-  result = selected.map(({ title, artist }) => ({
+  yt.tracks = selected.map(({ title, artist }) => ({
     title,
     artist
   }));
 }
+
+// возвращаем и треки и плейлисты
+return res.json({
+  tracks: yt.tracks,
+  playlists: yt.playlists || []
+});
 
 // 5. Возвращаем результат
 return res.json({ tracks: result });
