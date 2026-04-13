@@ -71,9 +71,28 @@ function buildSearchQuery(tags) {
     dark: "dark mood"
   };
 
-  return tags.map(t => map[t] || t).join(" ") + " song";
-}
+  const variations = [
+  "song",
+  "music",
+  "track",
+  "audio"
+];
 
+	function buildSearchQuery(tags) {
+  const map = {
+    sad: "sad emotional",
+    happy: "happy upbeat",
+    energetic: "workout",
+    calm: "relax",
+    chill: "lofi",
+    dark: "dark mood"
+  };
+
+  const variations = ["song", "music", "track", "audio"];
+  const randomWord = variations[Math.floor(Math.random() * variations.length)];
+
+  return tags.map(t => map[t] || t).join(" ") + " " + randomWord;
+}
 
 // ─────────────────────────────────────────────
 // YOUTUBE API
@@ -88,17 +107,9 @@ async function getYouTubeTracks(tags) {
 
     const data = await res.json();
 
-    const filtered = data.items.filter(item => {
-      const t = item.snippet.title.toLowerCase();
-      return !(
-        t.includes("mix") ||
-        t.includes("playlist") ||
-        t.includes("radio") ||
-        t.includes("live")
-      );
-    });
+ 	const filtered = data.items;
 
-    const tracks = [];
+   const ytTracks = [];
     const playlists = [];
 
     for (const item of filtered) {
@@ -118,7 +129,7 @@ async function getYouTubeTracks(tags) {
       }
     }
 
-    return { tracks, playlists };
+   return { tracks: ytTracks, playlists };
 
   } catch (err) {
     console.error("YT error:", err);

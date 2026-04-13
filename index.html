@@ -17,7 +17,7 @@
       color: #e2e8f0;
     
       max-width: 480px;
-      margin: 0 auto;
+      margin: 20px auto;
       padding: 16px;
     
       transition: all 0.2s ease;
@@ -27,6 +27,13 @@
       margin-bottom: 16px;
     }
 
+	h3 {
+	  margin-top: 16px;
+	  margin-bottom: 8px;
+	  font-size: 14px;
+	  color: #94a3b8;
+	}
+	
    input {
      width: 100%;
      max-width: 100%;
@@ -40,7 +47,8 @@
      background: #0f172a;
      color: #e2e8f0;
    
-     margin-bottom: 12px;
+   	 margin-top: 10px;
+     margin-bottom: 16px;
    }
     input:focus {
       border-color: #6366f1;
@@ -100,11 +108,12 @@
       to { opacity: 1; transform: translateY(0); }
     }
     #chips {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+     
     
     #chips button {
       background: #1e293b;
@@ -152,7 +161,7 @@
 
   <h2>🎧 WaveCore</h2>
   <p style="color:#94a3b8; margin-top:-10px;">Музыка под твоё настроение</p>
-  <button onclick="toggleTheme()">Сменить тему</button>
+ <button onclick="toggleTheme()" id="themeBtn">🌙</button>
 
   <input id="mood" placeholder="например: грустно ночью">
   <div id="chips">
@@ -250,8 +259,16 @@
         status.textContent = "";
       }
     }
-  function toggleTheme() {
+ function toggleTheme() {
       document.body.classList.toggle("light");
+    
+      const btn = document.getElementById("themeBtn");
+    
+      if (document.body.classList.contains("light")) {
+        btn.textContent = "🌙";
+      } else {
+        btn.textContent = "☀️";
+      }
     }
     function setMood(value) {
       document.getElementById("mood").value = value;
