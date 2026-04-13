@@ -71,23 +71,6 @@ function buildSearchQuery(tags) {
     dark: "dark mood"
   };
 
-  const variations = [
-  "song",
-  "music",
-  "track",
-  "audio"
-];
-
-	function buildSearchQuery(tags) {
-  const map = {
-    sad: "sad emotional",
-    happy: "happy upbeat",
-    energetic: "workout",
-    calm: "relax",
-    chill: "lofi",
-    dark: "dark mood"
-  };
-
   const variations = ["song", "music", "track", "audio"];
   const randomWord = variations[Math.floor(Math.random() * variations.length)];
 
@@ -114,7 +97,7 @@ async function getYouTubeTracks(tags) {
 
     for (const item of filtered) {
       if (item.id.kind === "youtube#video") {
-        tracks.push({
+       ytTracks.push({
           title: item.snippet.title,
           artist: item.snippet.channelTitle,
           url: `https://www.youtube.com/watch?v=${item.id.videoId}`
