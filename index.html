@@ -154,6 +154,10 @@
     input {
       display: block;
     }
+    /* ───────── ПЛЕЕР ───────── */
+    #player iframe {
+      border-radius: 12px;
+    }
   </style>
 </head>
 
@@ -175,6 +179,17 @@
   <div id="status"></div>
   <div id="error"></div>
   <ul id="result"></ul>
+
+<!-- ───────── ПЛЕЕР ───────── -->
+<div id="player" style="margin-top:20px; display:none;">
+  <iframe
+    id="playerFrame"
+    width="100%"
+    height="200"
+    frameborder="0"
+    allowfullscreen
+  ></iframe>
+</div>
 
   <script>
   const tg = window.Telegram?.WebApp;
@@ -226,8 +241,14 @@
           const li = document.createElement("li");
           li.textContent = `${track.title} — ${track.artist}`;
           
-          li.onclick = () => {
-            window.open(track.url, "_blank");
+       li.onclick = () => {
+            const player = document.getElementById("player");
+            const frame = document.getElementById("playerFrame");
+          
+            const videoId = track.url.split("v=")[1];
+          
+            frame.src = `https://www.youtube.com/embed/${videoId}`;
+            player.style.display = "block";
           };
         
           list.appendChild(li);
@@ -245,8 +266,14 @@
             const li = document.createElement("li");
             li.textContent = pl.title;
         
-            li.onclick = () => {
-              window.open(pl.url, "_blank");
+          li.onclick = () => {
+              const player = document.getElementById("player");
+              const frame = document.getElementById("playerFrame");
+            
+              const listId = pl.url.split("list=")[1];
+            
+              frame.src = `https://www.youtube.com/embed/videoseries?list=${listId}`;
+              player.style.display = "block";
             };
         
             list.appendChild(li);
