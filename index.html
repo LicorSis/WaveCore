@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>WaveCore</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
 
   <style>
   	* {
@@ -15,11 +14,11 @@
       font-family: -apple-system, sans-serif;
       background: #0f172a;
       color: #e2e8f0;
-    
+
       max-width: 480px;
       margin: 20px auto;
       padding: 16px;
-    
+
       transition: all 0.2s ease;
     }
 
@@ -33,20 +32,20 @@
 	  font-size: 14px;
 	  color: #94a3b8;
 	}
-	
+
    input {
      width: 100%;
      max-width: 100%;
-   
+
      padding: 14px 16px;
      font-size: 16px;
-   
+
      border-radius: 14px;
      border: 1px solid #334155;
-   
+
      background: #0f172a;
      color: #e2e8f0;
-   
+
    	 margin-top: 10px;
      margin-bottom: 16px;
    }
@@ -107,14 +106,14 @@
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
     #chips {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
         margin-bottom: 12px;
       }
-     
-    
+
     #chips button {
       background: #1e293b;
       border: none;
@@ -124,39 +123,94 @@
       cursor: pointer;
       font-size: 14px;
     }
+
     /* Светлая тема */
     body.light {
       background: white;
       color: black;
     }
-    
+
     body.light input {
       background: #f1f5f9;
       color: black;
     }
-    
+
     body.light #result li {
       background: #e2e8f0;
       color: black;
     }
-    
+
     body.light #chips button {
       background: #e2e8f0;
       color: black;
     }
+
+    body.light #player .player-box {
+      background: #e2e8f0;
+      border-color: #cbd5e1;
+    }
+
+    body.light #openLink {
+      color: #6366f1;
+    }
+
     button:active {
       transform: scale(0.97);
     }
+
     #result li:hover {
       background: #334155;
       cursor: pointer;
     }
+
     input {
       display: block;
     }
+
     /* ───────── ПЛЕЕР ───────── */
+    #player {
+      margin-top: 20px;
+    }
+
+    #player .player-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 12px;
+      animation: fadeIn 0.3s ease;
+    }
+
     #player iframe {
       border-radius: 12px;
+      width: 100%;
+      display: block;
+    }
+
+    #player .now-playing {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #openLink {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #818cf8;
+      text-decoration: none;
+    }
+    #openLink:hover {
+      text-decoration: underline;
+    }
+
+    #themeBtn {
+      width: auto;
+      padding: 8px 14px;
+      font-size: 18px;
+      margin-bottom: 12px;
     }
   </style>
 </head>
@@ -165,7 +219,7 @@
 
   <h2>🎧 WaveCore</h2>
   <p style="color:#94a3b8; margin-top:-10px;">Музыка под твоё настроение</p>
- <button onclick="toggleTheme()" id="themeBtn">🌙</button>
+  <button onclick="toggleTheme()" id="themeBtn">🌙</button>
 
   <input id="mood" placeholder="например: грустно ночью">
   <div id="chips">
@@ -178,129 +232,184 @@
 
   <div id="status"></div>
   <div id="error"></div>
-  <ul id="result"></ul>
 
-<!-- ───────── ПЛЕЕР ───────── -->
-<div id="player" style="margin-top:20px; display:none;">
-  <iframe
-    id="playerFrame"
-    width="100%"
-    height="200"
-    frameborder="0"
-    allowfullscreen
-  ></iframe>
-</div>
+  <!-- ───────── ПЛЕЕР (до списка, чтобы быть видным) ───────── -->
+  <div id="player" style="display:none;">
+    <div class="player-box">
+      <iframe
+        id="playerFrame"
+        width="100%"
+        height="200"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+      ></iframe>
+      <div class="now-playing" id="nowPlaying"></div>
+      <a id="openLink" href="#" target="_blank" rel="noopener">▶ Открыть на YouTube ↗</a>
+    </div>
+  </div>
+
+  <ul id="result"></ul>
 
   <script>
   const tg = window.Telegram?.WebApp;
-  
+
   if (tg) {
     tg.ready();
     tg.expand();
   }
-    async function generate() {
-      const mood = document.getElementById("mood").value.trim();
-      const status = document.getElementById("status");
-      const error = document.getElementById("error");
-      const list = document.getElementById("result");
 
-      error.textContent = "";
-      list.innerHTML = "";
+  // ───────── Безопасное извлечение videoId ─────────
+  function extractVideoId(url) {
+    try {
+      const u = new URL(url);
+      return u.searchParams.get("v") || "";
+    } catch {
+      // fallback на случай нестандартного URL
+      const match = url.match(/[?&]v=([^&]+)/);
+      return match ? match[1] : "";
+    }
+  }
 
-      if (!mood) {
-        error.textContent = "Введите настроение";
-        return;
+  // ───────── Безопасное извлечение listId ─────────
+  function extractListId(url) {
+    try {
+      const u = new URL(url);
+      return u.searchParams.get("list") || "";
+    } catch {
+      const match = url.match(/[?&]list=([^&]+)/);
+      return match ? match[1] : "";
+    }
+  }
+
+  // ───────── Показать плеер ─────────
+  function showPlayer(embedUrl, label, externalUrl) {
+    const player = document.getElementById("player");
+    const frame   = document.getElementById("playerFrame");
+    const nowPlay = document.getElementById("nowPlaying");
+    const link    = document.getElementById("openLink");
+
+    frame.src = embedUrl;
+    nowPlay.textContent = "🎵 " + label;
+    link.href = externalUrl;
+    player.style.display = "block";
+
+    // Скроллим к плееру, чтобы пользователь его увидел
+    player.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function generate() {
+    const mood   = document.getElementById("mood").value.trim();
+    const status = document.getElementById("status");
+    const error  = document.getElementById("error");
+    const list   = document.getElementById("result");
+
+    error.textContent = "";
+    list.innerHTML = "";
+
+    // Скрываем плеер от предыдущего запроса
+    document.getElementById("player").style.display = "none";
+    document.getElementById("playerFrame").src = "";
+
+    if (!mood) {
+      error.textContent = "Введите настроение";
+      return;
+    }
+
+    status.textContent = "🎵 Подбираем музыку...";
+    if (tg?.HapticFeedback) {
+      tg.HapticFeedback.impactOccurred("light");
+    }
+
+    try {
+      const res = await fetch("https://wavecore-api.onrender.com/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mood })
+      });
+
+      if (!res.ok) {
+        throw new Error("Ошибка сервера");
       }
 
-      status.textContent = "🎵 Подбираем музыку...";
-      if (tg?.HapticFeedback) {
-        tg.HapticFeedback.impactOccurred("light");
-      }
+      const data = await res.json();
 
-      try {
-        const res = await fetch("https://wavecore-api.onrender.com/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mood })
-        });
+      // ─────────────────────────────────────────────
+      // ТРЕКИ
+      // ─────────────────────────────────────────────
+      const tracksTitle = document.createElement("h3");
+      tracksTitle.textContent = "🎧 Треки";
+      list.appendChild(tracksTitle);
 
-        if (!res.ok) {
-          throw new Error("Ошибка сервера");
-        }
+      data.tracks.forEach(track => {
+        const li = document.createElement("li");
+        li.textContent = `${track.title} — ${track.artist}`;
 
-        const data = await res.json();
+        li.onclick = () => {
+          const videoId = extractVideoId(track.url);
+          if (!videoId) return;
 
-    // ─────────────────────────────────────────────
-        // ТРЕКИ
-        // ─────────────────────────────────────────────
-        const tracksTitle = document.createElement("h3");
-        tracksTitle.textContent = "🎧 Треки";
-        list.appendChild(tracksTitle);
-        
-        data.tracks.forEach(track => {
+          const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
+          showPlayer(embedUrl, `${track.title} — ${track.artist}`, track.url);
+
+          if (tg?.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred("medium");
+          }
+        };
+
+        list.appendChild(li);
+      });
+
+      // ─────────────────────────────────────────────
+      // ПЛЕЙЛИСТЫ
+      // ─────────────────────────────────────────────
+      if (data.playlists && data.playlists.length > 0) {
+        const playlistsTitle = document.createElement("h3");
+        playlistsTitle.textContent = "📂 Плейлисты";
+        list.appendChild(playlistsTitle);
+
+        data.playlists.forEach(pl => {
           const li = document.createElement("li");
-          li.textContent = `${track.title} — ${track.artist}`;
-          
-       li.onclick = () => {
-            const player = document.getElementById("player");
-            const frame = document.getElementById("playerFrame");
-          
-            const videoId = track.url.split("v=")[1];
-          
-            frame.src = `https://www.youtube.com/embed/${videoId}`;
-            player.style.display = "block";
+          li.textContent = pl.title;
+
+          li.onclick = () => {
+            const listId = extractListId(pl.url);
+            if (!listId) return;
+
+            const embedUrl = `https://www.youtube.com/embed/videoseries?list=${listId}`;
+            showPlayer(embedUrl, pl.title, pl.url);
+
+            if (tg?.HapticFeedback) {
+              tg.HapticFeedback.impactOccurred("medium");
+            }
           };
-        
+
           list.appendChild(li);
         });
-        
-        // ─────────────────────────────────────────────
-        // ПЛЕЙЛИСТЫ
-        // ─────────────────────────────────────────────
-        if (data.playlists && data.playlists.length > 0) {
-          const playlistsTitle = document.createElement("h3");
-          playlistsTitle.textContent = "📂 Плейлисты";
-          list.appendChild(playlistsTitle);
-        
-          data.playlists.forEach(pl => {
-            const li = document.createElement("li");
-            li.textContent = pl.title;
-        
-          li.onclick = () => {
-              const player = document.getElementById("player");
-              const frame = document.getElementById("playerFrame");
-            
-              const listId = pl.url.split("list=")[1];
-            
-              frame.src = `https://www.youtube.com/embed/videoseries?list=${listId}`;
-              player.style.display = "block";
-            };
-        
-            list.appendChild(li);
-          });
-        }
+      }
 
-      } catch (err) {
-        error.textContent = "Ошибка подключения";
-      } finally {
-        status.textContent = "";
-      }
+    } catch (err) {
+      error.textContent = "Ошибка подключения";
+    } finally {
+      status.textContent = "";
     }
- function toggleTheme() {
-      document.body.classList.toggle("light");
-    
-      const btn = document.getElementById("themeBtn");
-    
-      if (document.body.classList.contains("light")) {
-        btn.textContent = "🌙";
-      } else {
-        btn.textContent = "☀️";
-      }
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle("light");
+
+    const btn = document.getElementById("themeBtn");
+
+    if (document.body.classList.contains("light")) {
+      btn.textContent = "☀️";
+    } else {
+      btn.textContent = "🌙";
     }
-    function setMood(value) {
-      document.getElementById("mood").value = value;
-    }
-    
+  }
+
+  function setMood(value) {
+    document.getElementById("mood").value = value;
+  }
   </script>
 
 </body>
