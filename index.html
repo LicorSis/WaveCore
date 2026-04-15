@@ -252,7 +252,13 @@
   <ul id="result"></ul>
 
   <script>
+  
   const tg = window.Telegram?.WebApp;
+  
+// ───────── СОСТОЯНИЕ ВОЛНЫ ─────────
+let currentQueue = [];
+let currentIndex = 0;
+let waveInterval = null; // чтобы не создавать несколько таймеров
 
   if (tg) {
     tg.ready();
@@ -306,6 +312,10 @@
 
     error.textContent = "";
     list.innerHTML = "";
+    // сбрасываем волну
+    if (waveInterval) {
+      clearInterval(waveInterval);
+    }
 
     // Скрываем плеер от предыдущего запроса
     document.getElementById("player").style.display = "none";
@@ -333,6 +343,10 @@
       }
 
       const data = await res.json();
+      
+      // сохраняем очередь треков
+      currentQueue = data.tracks || [];
+      currentIndex = 0;
 
       // ─────────────────────────────────────────────
       // ТРЕКИ
@@ -373,6 +387,7 @@
           li.textContent = pl.title;
 
           li.onclick = () => {
+          currentIndex = data.tracks.indexOf(track);
             const listId = extractListId(pl.url);
             if (!listId) return;
 
@@ -390,7 +405,12 @@
 
     } catch (err) {
       error.textContent = "Ошибка подключения";
-    } finally {
+    }
+
+    // запускаем волну автоматически
+    playCurrentTrack();
+    startWaveAutoNext();
+     finally {
       status.textContent = "";
     }
   }
@@ -409,6 +429,43 @@
 
   function setMood(value) {
     document.getElementById("mood").value = value;
+  }
+  
+  // ───────── ПРОИГРЫВАНИЕ ТЕКУЩЕГО ТРЕКА ─────────
+  function playCurrentTrack() {
+    if (!currentQueue.length) return;
+  
+    const track = currentQueue[currentIndex];
+  
+    const videoId = extractVideoId(track.url);
+    if (!videoId) return;
+  
+    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+  
+    showPlayer(
+      embedUrl,
+      `${track.title} — ${track.artist}`,
+      track.url
+    );
+  }
+  // ───────── АВТОПЕРЕКЛЮЧЕНИЕ (ВОЛНА) ─────────
+  function startWaveAutoNext() {
+    // если уже есть таймер — очищаем
+    if (waveInterval) {
+      clearInterval(waveInterval);
+    }
+  
+    waveInterval = setInterval(() => {
+      if (!currentQueue.length) return;
+  
+      currentIndex++;
+  
+      if (currentIndex >= currentQueue.length) {
+        currentIndex = 0;
+      }
+  
+      playCurrentTrack();
+    }, 25000); // каждые 25 секунд
   }
   </script>
 
